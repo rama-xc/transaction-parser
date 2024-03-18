@@ -17,7 +17,7 @@ func main() {
 func loadConfigPath() string {
 	var path string
 
-	flag.StringVar(&path, "config", "./config/local.yaml", "path to config file")
+	flag.StringVar(&path, "config", "./config/local.toml", "path to config file")
 	flag.Parse()
 
 	if path == "" {

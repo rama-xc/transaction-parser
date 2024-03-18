@@ -1,9 +1,9 @@
 package logger
 
 import (
-	"awesomeProject/blockchain-parser/internal/app/http-server/lib/logger/handlers/slogpretty"
 	"log/slog"
 	"os"
+	"transaction-parser/internal/app/common/logger/handlers/slogpretty"
 )
 
 const (
