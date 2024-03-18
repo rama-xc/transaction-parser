@@ -29,7 +29,7 @@ type ParserComposer struct {
 
 	currentState State
 
-	parsers map[parser.Type]int
+	parsers map[parser.Type]parser.IParser
 }
 
 func (p *ParserComposer) setState(s State) {
@@ -50,8 +50,8 @@ func (p *ParserComposer) ID() string {
 
 func (p *ParserComposer) createParser(tp parser.Type) (parser.IParser, error) {
 	switch tp {
-	case parser.History:
-		return parser.NewHistoryParser(p.gateway), nil
+	//case parser.History:
+	//	return parser.NewHistoryParser(), nil
 	default:
 		return nil, InvalidParserType
 	}

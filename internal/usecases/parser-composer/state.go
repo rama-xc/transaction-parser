@@ -1,10 +1,5 @@
 package prsrcmps
 
-import (
-	"fmt"
-	"transaction-parser/internal/usecases/parser-composer/parser"
-)
-
 type State interface {
 	run()
 	stop()
@@ -15,22 +10,22 @@ type ReadyState struct {
 }
 
 func (r *ReadyState) run() {
-	log := r.parserComposer.log
 
-	cfg := map[parser.Type]int{parser.History: 4}
-
-	for tp, wrks := range cfg {
-		psr, err := r.parserComposer.createParser(tp)
-		if err != nil {
-			log.Error(
-				fmt.Sprintf("can't create %s", parser.History),
-			)
-			return
-		}
-		psr.SetWorkers(wrks)
-
-		psr.Start()
-	}
+	//log := r.parserComposer.log
+	//
+	//cfg := map[parser.Type]int{parser.History: 4}
+	//
+	//for tp, wrks := range cfg {
+	//	psr, err := r.parserComposer.createParser(tp)
+	//	if err != nil {
+	//		log.Error(
+	//			fmt.Sprintf("can't create %s", parser.History),
+	//		)
+	//		return
+	//	}
+	//
+	//	psr.Start()
+	//}
 
 }
 

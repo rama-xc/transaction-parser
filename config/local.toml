@@ -7,3 +7,5 @@ port = 8008
 id = "ETH:mainnet"
 provider_url = "https://eth-mainnet.g.alchemy.com/v2/9Iwzq4BnnPoiF8i0X_QHKtczKVCy2bkS"
 blockchain = "ethereum"
+from_blk = 0
+to_blk = 190

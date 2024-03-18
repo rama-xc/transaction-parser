@@ -54,7 +54,7 @@ func (c *Controller) Run(ctx iris.Context) {
 		return
 	}
 
-	var opts map[parser.Type]int
+	opts := map[parser.Type]int{}
 
 	for _, prs := range dto.Parsers {
 		opts[prs.Type] = prs.Workers
@@ -67,7 +67,5 @@ func (c *Controller) Run(ctx iris.Context) {
 
 	cc.Run()
 
-	_ = ctx.JSON(
-		map[string]bool{"is_exist": ok},
-	)
+	_ = ctx.JSON(ok)
 }

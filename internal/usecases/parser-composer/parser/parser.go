@@ -2,6 +2,7 @@ package parser
 
 import (
 	"context"
+	"log/slog"
 	"transaction-parser/internal/entity"
 )
 
@@ -20,10 +21,13 @@ const (
 
 type IParser interface {
 	Start()
-	SetWorkers(wrks int)
+	runQueryExecution()
+	runWorkersGeneration()
 }
 
 type Parser struct {
+	ctx context.Context
+
 	jobs chan *Job
 	free chan bool
 	stop chan bool
@@ -33,31 +37,86 @@ type Parser struct {
 	queue *JobQueue
 
 	gateway BlockProvider
+	log     *slog.Logger
 }
 
 func (p *Parser) Start() {
 
+	p.runWorkersGeneration()
+
+	p.runQueryExecution()
+
 }
 
-func (p *Parser) SetWorkers(wrks int) {
-	p.wrks = wrks
+func (p *Parser) runQueryExecution() {
+	for p.wrks != 0 {
+		select {
+		case <-p.free:
+			p.queue.SendJob()
+		case <-p.stop:
+			p.wrks--
+		}
+	}
+}
+
+func (p *Parser) runWorkersGeneration() {
+	for i := 0; i < p.wrks; i++ {
+		wrk := NewJobExecutor(
+			p.jobs,
+			p.free,
+			p.stop,
+			p.log,
+			p.ctx,
+			p.gateway,
+		)
+
+		go wrk.Run()
+	}
 }
 
 type HistoryParser struct {
 	Parser
 }
 
-func NewHistoryParser(
-	gateway BlockProvider,
-) *HistoryParser {
-
-	return &HistoryParser{
-		Parser: Parser{
-			gateway: gateway,
-		},
-	}
-
+func NewHistoryParser(parser Parser) *HistoryParser {
+	return &HistoryParser{Parser: parser}
 }
+
+//func NewHistoryParser(
+//	gateway BlockProvider, log *slog.Logger,
+//	wrks int,
+//	fromBlk, toBlk int64,
+//) *HistoryParser {
+//	jobs := make(chan *Job)
+//	free := make(chan bool)
+//	stop := make(chan bool)
+//
+//	var queue []*Job
+//
+//	for blk := fromBlk; blk <= toBlk; blk++ {
+//		job := NewJob(fmt.Sprintf("#%d", blk), blk)
+//		queue = append(queue, job)
+//	}
+//
+//	jq := NewJobQueue(
+//		queue,
+//		jobs, free, stop,
+//	)
+//
+//	return &HistoryParser{
+//		Parser: Parser{
+//			jobs:    jobs,
+//			free:    free,
+//			stop:    stop,
+//			wrks:    wrks,
+//			log:     log,
+//			ctx:     context.Background(),
+//			queue:   jq,
+//			gateway: gateway,
+//		},
+//	}
+//
+//}
 
 type RealTimeParser struct {
 	Parser

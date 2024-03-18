@@ -16,20 +16,20 @@ import (
 type ComposerMap map[string]prsrcmps.IParserComposer
 
 type App struct {
-	port    int
-	log     *slog.Logger
-	prsCprs ComposerMap
+	port        int
+	log         *slog.Logger
+	prsComposer ComposerMap
 }
 
 func MustLoad(cfgPath string) *App {
 	cfg := config.MustLoad(cfgPath)
 	log := logger.MustLoad(cfg.Env)
-	prsCprs := prsrcmps.MustLoadParsers(cfg.Parsers)
+	prsComposer := prsrcmps.MustLoadParsers(cfg.Parsers)
 
 	app := &App{
-		port:    cfg.HTTP.Port,
-		log:     log,
-		prsCprs: prsCprs,
+		port:        cfg.HTTP.Port,
+		log:         log,
+		prsComposer: prsComposer,
 	}
 
 	log.Info("Welcome to BlockChain Transaction Parser ;) Application created successfully.")
@@ -55,7 +55,7 @@ func (a *App) MustRun() {
 			{
 				ctrl := prscontroller.New(
 					a.log,
-					a.prsCprs,
+					a.prsComposer,
 				)
 
 				prs.Get("/", ctrl.ParsersIDs)
