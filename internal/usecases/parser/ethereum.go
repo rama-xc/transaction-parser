@@ -10,7 +10,7 @@ type Ethereum struct {
 	gateway BlockProvider
 }
 
-func (e *Ethereum) getHistoryParser(
+func (e *Ethereum) GetHistoryParser(
 	fromBlk, toBlk int64,
 	wrks int,
 	log *slog.Logger,
@@ -36,10 +36,10 @@ func (e *Ethereum) getHistoryParser(
 		free:    free,
 		stop:    stop,
 		wrks:    wrks,
-		log:     log,
-		ctx:     context.Background(),
 		queue:   jq,
 		gateway: e.gateway,
+		log:     log,
+		ctx:     context.Background(),
 	}
 }
 

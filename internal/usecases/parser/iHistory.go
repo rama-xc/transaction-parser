@@ -18,12 +18,11 @@ type History struct {
 	free chan bool
 	stop chan bool
 
-	wrks int
-
+	wrks  int
 	queue *JobQueue
 
-	gateway BlockProvider
 	log     *slog.Logger
+	gateway BlockProvider
 }
 
 func (p *History) Start() {

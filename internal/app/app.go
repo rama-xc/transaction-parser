@@ -10,26 +10,21 @@ import (
 	prscontroller "transaction-parser/internal/adapters/controllers/parsers"
 	"transaction-parser/internal/app/common/config"
 	"transaction-parser/internal/app/common/logger"
-	prsrcmps "transaction-parser/internal/usecases/parser-composer"
+	"transaction-parser/internal/usecases/parser"
 )
 
-type ComposerMap map[string]prsrcmps.IParserComposer
-
 type App struct {
-	port        int
-	log         *slog.Logger
-	prsComposer ComposerMap
+	port int
+	log  *slog.Logger
 }
 
 func MustLoad(cfgPath string) *App {
 	cfg := config.MustLoad(cfgPath)
 	log := logger.MustLoad(cfg.Env)
-	prsComposer := prsrcmps.MustLoadParsers(cfg.Parsers)
 
 	app := &App{
-		port:        cfg.HTTP.Port,
-		log:         log,
-		prsComposer: prsComposer,
+		port: cfg.HTTP.Port,
+		log:  log,
 	}
 
 	log.Info("Welcome to BlockChain Transaction Parser ;) Application created successfully.")
@@ -53,14 +48,25 @@ func (a *App) MustRun() {
 		{
 			prs := v1.Party("/parsers")
 			{
-				ctrl := prscontroller.New(
-					a.log,
-					a.prsComposer,
+				factory, err := parser.GetParsersFactory(
+					config.ParserConfig{
+						ID:          "ETH:mainnet",
+						ProviderUrl: "https://eth-mainnet.g.alchemy.com/v2/9Iwzq4BnnPoiF8i0X_QHKtczKVCy2bkS",
+						Blockchain:  "ethereum",
+					},
 				)
+				if err != nil {
+					panic("cant create factory")
+				}
 
-				prs.Get("/", ctrl.ParsersIDs)
-				prs.Get("/{id}", ctrl.ParserExist)
-				prs.Post("/run", ctrl.Run)
+				controller := prscontroller.New(a.log, factory.GetHistoryParser(
+					0,
+					1000,
+					4,
+					a.log,
+				))
+
+				prs.Get("/run", controller.RunParsing)
 			}
 		}
 	}
