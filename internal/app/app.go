@@ -14,17 +14,20 @@ import (
 )
 
 type App struct {
-	port int
-	log  *slog.Logger
+	port  int
+	log   *slog.Logger
+	prsrs map[string]parser.IHistory
 }
 
 func MustLoad(cfgPath string) *App {
 	cfg := config.MustLoad(cfgPath)
 	log := logger.MustLoad(cfg.Env)
+	prs := parser.MustLoad(cfg.ParsersFactories, log)
 
 	app := &App{
-		port: cfg.HTTP.Port,
-		log:  log,
+		port:  cfg.HTTP.Port,
+		log:   log,
+		prsrs: prs,
 	}
 
 	log.Info("Welcome to BlockChain Transaction Parser ;) Application created successfully.")
@@ -48,25 +51,9 @@ func (a *App) MustRun() {
 		{
 			prs := v1.Party("/parsers")
 			{
-				factory, err := parser.GetParsersFactory(
-					config.ParserConfig{
-						ID:          "ETH:mainnet",
-						ProviderUrl: "https://eth-mainnet.g.alchemy.com/v2/9Iwzq4BnnPoiF8i0X_QHKtczKVCy2bkS",
-						Blockchain:  "ethereum",
-					},
-				)
-				if err != nil {
-					panic("cant create factory")
-				}
+				controller := prscontroller.New(a.prsrs)
 
-				controller := prscontroller.New(a.log, factory.GetHistoryParser(
-					0,
-					1000,
-					4,
-					a.log,
-				))
-
-				prs.Get("/run", controller.RunParsing)
+				prs.Get("/", controller.ShowAll)
 			}
 		}
 	}

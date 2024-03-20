@@ -12,19 +12,30 @@ const (
 )
 
 type Config struct {
-	Env     string         `toml:"env" env-default:"local"`
-	HTTP    HTTPConfig     `toml:"http-server"`
-	Parsers []ParserConfig `toml:"parsers"`
+	Env              string                   `toml:"env" env-default:"local"`
+	HTTP             HTTPConfig               `toml:"http-server"`
+	ParsersFactories []ParsersFactoriesConfig `toml:"parsers-factories"`
 }
 
 type HTTPConfig struct {
 	Port int `toml:"port" env-required:"true"`
 }
 
-type ParserConfig struct {
+type ParsersFactoriesConfig struct {
 	ID          string         `toml:"id" env-required:"true"`
 	ProviderUrl string         `toml:"provider_url" env-required:"true"`
 	Blockchain  BlockchainName `toml:"blockchain" env-required:"true"`
+	Parsers     ParsersConfig  `toml:"parsers" env-required:"true"`
+}
+
+type ParsersConfig struct {
+	History HistoryParserConfig `toml:"history"`
+}
+
+type HistoryParserConfig struct {
+	Workers   int   `toml:"workers" env-required:"true"`
+	BlockTo   int64 `toml:"blockTo" env-required:"true"`
+	BlockFrom int64 `toml:"blockFrom" env-required:"true"`
 }
 
 func MustLoad(path string) *Config {

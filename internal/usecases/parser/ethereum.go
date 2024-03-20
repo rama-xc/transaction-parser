@@ -31,7 +31,7 @@ func (e *Ethereum) GetHistoryParser(
 		jobs, free, stop,
 	)
 
-	return &History{
+	h := &History{
 		jobs:    jobs,
 		free:    free,
 		stop:    stop,
@@ -41,6 +41,10 @@ func (e *Ethereum) GetHistoryParser(
 		log:     log,
 		ctx:     context.Background(),
 	}
+
+	go h.runController()
+
+	return h
 }
 
 type EthereumHistory struct {
