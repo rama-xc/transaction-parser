@@ -18,6 +18,7 @@ func (e *Ethereum) GetHistoryParser(
 	jobs := make(chan *Job)
 	free := make(chan bool)
 	stop := make(chan bool)
+	comm := make(chan Command)
 
 	var queue []*Job
 
@@ -32,17 +33,27 @@ func (e *Ethereum) GetHistoryParser(
 	)
 
 	h := &History{
+		comm:    comm,
 		jobs:    jobs,
 		free:    free,
 		stop:    stop,
-		wrks:    wrks,
 		queue:   jq,
 		gateway: e.gateway,
 		log:     log,
 		ctx:     context.Background(),
 	}
 
+	h.createWrks(wrks)
+
 	go h.runController()
+
+	readyState := &ReadyState{prsr: h, State: State{id: ReadyStateID}}
+	runningState := &RunningState{prsr: h, State: State{id: RunningStateID}}
+
+	h.setState(readyState)
+
+	h.readyState = readyState
+	h.runningState = runningState
 
 	return h
 }

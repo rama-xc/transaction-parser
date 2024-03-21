@@ -27,6 +27,24 @@ func (q *JobQueue) shift() *Job {
 	return s
 }
 
+func (q *JobQueue) ViewNext() *Job {
+	if len(q.queue) == 0 {
+		return nil
+	}
+
+	next := q.queue[0]
+
+	return &Job{
+		id:        next.id,
+		blkNumber: next.blkNumber,
+		block:     next.block,
+	}
+}
+
+func (q *JobQueue) Length() int {
+	return len(q.queue)
+}
+
 func (q *JobQueue) SendJob() {
 	q.jobs <- q.shift()
 }

@@ -49,11 +49,13 @@ func (a *App) MustRun() {
 		core.Get("/", corecontroller.Ping)
 		v1 := core.Party("/v1")
 		{
-			prs := v1.Party("/parsers")
+			prs := v1.Party("/prs")
 			{
 				controller := prscontroller.New(a.prsrs)
 
 				prs.Get("/", controller.ShowAll)
+				prs.Post("/run", controller.Run)
+				prs.Get("/profile/{id}", controller.Profiling)
 			}
 		}
 	}

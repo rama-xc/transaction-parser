@@ -28,8 +28,6 @@ func NewJobExecutor(jobs chan *Job, free chan bool, stop chan bool, log *slog.Lo
 
 func (e *JobExecutor) Run() {
 	for {
-		e.free <- true
-
 		job := <-e.jobs
 
 		if job == nil {
@@ -39,6 +37,8 @@ func (e *JobExecutor) Run() {
 
 		parse := NewParseBlock(e.log, e.ctx, e.gateway)
 		parse.execute(job)
+
+		e.free <- true
 	}
 }
 

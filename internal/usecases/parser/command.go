@@ -6,12 +6,17 @@ type Command interface {
 
 type StartCommand struct {
 	prsr IHistory
+	resp chan Ping
 }
 
-func NewStartCommand(prsr IHistory) *StartCommand {
-	return &StartCommand{prsr: prsr}
+func NewStartCommand(prsr IHistory, resp chan Ping) *StartCommand {
+	return &StartCommand{prsr: prsr, resp: resp}
 }
 
 func (c *StartCommand) Execute() {
-	c.prsr.Start()
+
+	c.prsr.start(
+		c.resp,
+	)
+
 }
