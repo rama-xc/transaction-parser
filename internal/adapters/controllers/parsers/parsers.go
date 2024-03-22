@@ -50,6 +50,11 @@ func (c *Controller) Run(ctx iris.Context) {
 	_ = ctx.JSON(map[string]parser.Ping{"message": ping})
 }
 
+func (c *Controller) Option(ctx iris.Context) {
+	var dto parser.OptionDTO
+
+}
+
 func (c *Controller) Profiling(ctx iris.Context) {
 	var dto ProfilingParams
 

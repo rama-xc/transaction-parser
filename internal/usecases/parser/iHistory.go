@@ -5,22 +5,17 @@ import (
 	"log/slog"
 )
 
-type ProfilingDTO struct {
-	Workers     int     `json:"workers"`
-	QueueLength int     `json:"queue_length"`
-	State       StateID `json:"state"`
-	BlockFrom   int64   `json:"block_from"`
-	BlockTo     int64   `json:"block_to"`
-	BlockNext   int64   `json:"block_next"`
-}
-
 type IHistory interface {
 	SendCommand(c Command)
 	Profile() *ProfilingDTO
+
 	start(resp chan Ping)
+	options(dto OptionDTO)
+
 	runController()
 	createWrks(wrks int)
 	destroyWrks(wrks int)
+	setWrks(wrks int)
 	executeQuery()
 }
 
@@ -69,6 +64,12 @@ func (p *History) start(resp chan Ping) {
 
 }
 
+func (p *History) options(dto OptionDTO) {
+
+	p.currentState.options(dto)
+
+}
+
 func (p *History) runController() {
 	for {
 		select {
@@ -112,6 +113,13 @@ func (p *History) destroyWrks(wrks int) {
 
 		p.wrks--
 	}
+}
+
+func (p *History) setWrks(wrks int) {
+
+	p.destroyWrks(p.wrks)
+	p.createWrks(wrks)
+
 }
 
 func (p *History) executeQuery() {

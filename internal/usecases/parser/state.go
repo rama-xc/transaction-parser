@@ -9,7 +9,9 @@ var (
 
 type IState interface {
 	getID() StateID
+
 	start(resp chan Ping)
+	options(dto OptionDTO)
 }
 
 type State struct {
@@ -29,6 +31,18 @@ func (s *RunningState) start(resp chan Ping) {
 	resp <- AlreadyStartedPing
 }
 
+func (s *RunningState) options(dto OptionDTO) {
+	if dto.Workers > s.prsr.wrks {
+		s.prsr.createWrks(dto.Workers - s.prsr.wrks)
+	} else {
+
+	}
+
+	s.prsr.setWrks(dto.Workers)
+
+	dto.Resp <- SuccessOptionPing
+}
+
 type ReadyState struct {
 	State
 	prsr *History
@@ -42,4 +56,10 @@ func (s *ReadyState) start(resp chan Ping) {
 	s.prsr.setState(runningState)
 
 	resp <- SuccessStartedPing
+}
+
+func (s *ReadyState) options(dto OptionDTO) {
+	s.prsr.setWrks(dto.Workers)
+
+	dto.Resp <- SuccessOptionPing
 }

@@ -14,9 +14,14 @@ func NewStartCommand(prsr IHistory, resp chan Ping) *StartCommand {
 }
 
 func (c *StartCommand) Execute() {
+	c.prsr.start(c.resp)
+}
 
-	c.prsr.start(
-		c.resp,
-	)
+type OptionCommand struct {
+	prsr IHistory
+	dto  OptionDTO
+}
 
+func (c *OptionCommand) Execute() {
+	c.prsr.options(c.dto)
 }
