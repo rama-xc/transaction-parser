@@ -12,9 +12,9 @@ type JobHandler interface {
 }
 
 type JobExecutor struct {
-	jobs chan *Job
-	free chan bool
-	stop chan bool
+	jobs     chan *Job
+	execFree chan bool
+	execStop chan bool
 
 	log *slog.Logger
 	ctx context.Context
@@ -22,23 +22,27 @@ type JobExecutor struct {
 	gateway BlockProvider
 }
 
-func NewJobExecutor(jobs chan *Job, free chan bool, stop chan bool, log *slog.Logger, ctx context.Context, gateway BlockProvider) *JobExecutor {
-	return &JobExecutor{jobs: jobs, free: free, stop: stop, log: log, ctx: ctx, gateway: gateway}
+func NewJobExecutor(jobs chan *Job, execFree, execStop chan bool, log *slog.Logger, ctx context.Context, gateway BlockProvider) *JobExecutor {
+	return &JobExecutor{jobs: jobs, execFree: execFree, execStop: execStop, log: log, ctx: ctx, gateway: gateway}
 }
 
 func (e *JobExecutor) Run() {
+RunningLoop:
 	for {
-		job := <-e.jobs
+		select {
+		case job := <-e.jobs:
+			if job == nil {
+				e.log.Warn("Get Empty Job!")
+				continue
+			}
 
-		if job == nil {
-			e.stop <- true
-			break
+			parse := NewParseBlock(e.log, e.ctx, e.gateway)
+			parse.execute(job)
+
+			e.execFree <- true
+		case <-e.execStop:
+			break RunningLoop
 		}
-
-		parse := NewParseBlock(e.log, e.ctx, e.gateway)
-		parse.execute(job)
-
-		e.free <- true
 	}
 }
 

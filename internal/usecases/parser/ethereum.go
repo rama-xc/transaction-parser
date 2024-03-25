@@ -12,7 +12,7 @@ type Ethereum struct {
 
 func (e *Ethereum) GetHistoryParser(
 	fromBlk, toBlk int64,
-	wrks int,
+	execs int,
 	log *slog.Logger,
 ) IHistory {
 	jobs := make(chan *Job)
@@ -28,27 +28,26 @@ func (e *Ethereum) GetHistoryParser(
 	}
 
 	jq := NewJobQueue(
-		queue,
-		jobs, free, stop,
+		queue, jobs,
 	)
 
 	h := &History{
-		comm:    comm,
-		jobs:    jobs,
-		free:    free,
-		stop:    stop,
-		queue:   jq,
-		gateway: e.gateway,
-		log:     log,
-		ctx:     context.Background(),
+		comm:     comm,
+		jobs:     jobs,
+		execFree: free,
+		execStop: stop,
+		queue:    jq,
+		gateway:  e.gateway,
+		log:      log,
+		ctx:      context.Background(),
 	}
 
-	h.createWrks(wrks)
+	h.createExecs(execs)
 
 	go h.runController()
 
-	readyState := &ReadyState{prsr: h, State: State{id: ReadyStateID}}
-	runningState := &RunningState{prsr: h, State: State{id: RunningStateID}}
+	readyState := &ReadyState{prsr: h}
+	runningState := &RunningState{prsr: h}
 
 	h.setState(readyState)
 

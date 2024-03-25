@@ -4,24 +4,30 @@ type Command interface {
 	Execute()
 }
 
-type StartCommand struct {
+type RunCommand struct {
 	prsr IHistory
-	resp chan Ping
 }
 
-func NewStartCommand(prsr IHistory, resp chan Ping) *StartCommand {
-	return &StartCommand{prsr: prsr, resp: resp}
+func NewRunCommand(prsr IHistory) *RunCommand {
+	return &RunCommand{prsr: prsr}
 }
 
-func (c *StartCommand) Execute() {
-	c.prsr.start(c.resp)
+func (c *RunCommand) Execute() {
+	c.prsr.run()
 }
 
-type OptionCommand struct {
+type OptionsCommand struct {
 	prsr IHistory
-	dto  OptionDTO
+
+	wrks int
 }
 
-func (c *OptionCommand) Execute() {
-	c.prsr.options(c.dto)
+func NewOptionsCommand(prsr IHistory, wrks int) *OptionsCommand {
+	return &OptionsCommand{prsr: prsr, wrks: wrks}
+}
+
+func (c *OptionsCommand) Execute() {
+	c.prsr.options(
+		c.wrks,
+	)
 }

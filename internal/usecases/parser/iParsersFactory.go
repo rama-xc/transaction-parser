@@ -16,7 +16,7 @@ type BlockProvider interface {
 }
 
 type IParsersFactory interface {
-	GetHistoryParser(fromBlk, toBlk int64, wrks int, log *slog.Logger) IHistory
+	GetHistoryParser(fromBlk, toBlk int64, execs int, log *slog.Logger) IHistory
 }
 
 func GetParsersFactory(

@@ -1,65 +1,81 @@
 package parser
 
+import "math"
+
 type StateID string
 
-var (
-	ReadyStateID   StateID = "ready"
-	RunningStateID StateID = "running"
-)
-
 type IState interface {
-	getID() StateID
-
-	start(resp chan Ping)
-	options(dto OptionDTO)
-}
-
-type State struct {
-	id StateID
-}
-
-func (s *State) getID() StateID {
-	return s.id
+	run()
+	profile() map[string]interface{}
+	options(wrks int)
 }
 
 type RunningState struct {
-	State
 	prsr *History
 }
 
-func (s *RunningState) start(resp chan Ping) {
-	resp <- AlreadyStartedPing
+func (s *RunningState) run() {
+	s.prsr.log.Warn("Parsing already started!")
 }
 
-func (s *RunningState) options(dto OptionDTO) {
-	if dto.Workers > s.prsr.wrks {
-		s.prsr.createWrks(dto.Workers - s.prsr.wrks)
-	} else {
-
+func (s *RunningState) options(execs int) {
+	if execs < 0 {
+		return
 	}
 
-	s.prsr.setWrks(dto.Workers)
+	absExecs := int(math.Abs(float64(execs - s.prsr.execs)))
 
-	dto.Resp <- SuccessOptionPing
+	if execs > s.prsr.execs {
+		s.prsr.createExecs(absExecs)
+		s.prsr.activateExecs(absExecs)
+
+		return
+	}
+
+	s.prsr.destroyExecs(absExecs)
+}
+
+func (s *RunningState) profile() map[string]interface{} {
+	res := make(map[string]interface{})
+
+	res["state"] = "running"
+	res["executors"] = s.prsr.execs
+	res["queue_len"] = s.prsr.queue.Length()
+
+	return res
 }
 
 type ReadyState struct {
-	State
 	prsr *History
 }
 
-func (s *ReadyState) start(resp chan Ping) {
-	runningState := s.prsr.runningState
+func (s *ReadyState) run() {
+	s.prsr.activateExecs(
+		s.prsr.execs,
+	)
 
-	s.prsr.executeQuery()
+	s.prsr.setState(
+		s.prsr.runningState,
+	)
 
-	s.prsr.setState(runningState)
-
-	resp <- SuccessStartedPing
+	go s.prsr.handleQueryCompletion()
 }
 
-func (s *ReadyState) options(dto OptionDTO) {
-	s.prsr.setWrks(dto.Workers)
+func (s *ReadyState) options(execs int) {
+	if execs < 0 {
+		return
+	}
 
-	dto.Resp <- SuccessOptionPing
+	s.prsr.setExecs(execs)
+
+}
+
+func (s *ReadyState) profile() map[string]interface{} {
+	res := make(map[string]interface{})
+
+	res["state"] = "ready to start"
+	res["executors"] = s.prsr.execs
+	res["queue_len"] = s.prsr.queue.Length()
+
+	return res
 }

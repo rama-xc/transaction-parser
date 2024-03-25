@@ -27,9 +27,6 @@ func (c *Controller) ShowAll(ctx iris.Context) {
 func (c *Controller) Run(ctx iris.Context) {
 	var dto RunBody
 
-	resp := make(chan parser.Ping)
-	defer close(resp)
-
 	if err := ctx.ReadBody(&dto); err != nil {
 		ctx.StopWithError(http.StatusBadRequest, ValidationErr)
 		return
@@ -42,24 +39,35 @@ func (c *Controller) Run(ctx iris.Context) {
 	}
 
 	prsr.SendCommand(
-		parser.NewStartCommand(prsr, resp),
+		parser.NewRunCommand(prsr),
 	)
 
-	ping := <-resp
-
-	_ = ctx.JSON(map[string]parser.Ping{"message": ping})
+	_ = ctx.JSON(map[string]string{"message": "command send"})
 }
 
 func (c *Controller) Option(ctx iris.Context) {
-	var dto parser.OptionDTO
+	var dto OptionsBody
 
+	if err := ctx.ReadParams(&dto); err != nil {
+		ctx.StopWithError(http.StatusBadRequest, ValidationErr)
+		return
+	}
+
+	prsr, ok := c.prsrs[dto.ID]
+	if ok != true {
+		ctx.StopWithError(http.StatusNotFound, ParserNotFoundErr)
+		return
+	}
+
+	prsr.SendCommand(
+		parser.NewOptionsCommand(prsr, dto.Wrks),
+	)
+
+	_ = ctx.JSON(map[string]string{"message": "command send"})
 }
 
 func (c *Controller) Profiling(ctx iris.Context) {
 	var dto ProfilingParams
-
-	resp := make(chan parser.Ping)
-	defer close(resp)
 
 	if err := ctx.ReadParams(&dto); err != nil {
 		ctx.StopWithError(http.StatusBadRequest, ValidationErr)

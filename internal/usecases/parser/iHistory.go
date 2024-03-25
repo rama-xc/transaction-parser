@@ -7,27 +7,28 @@ import (
 
 type IHistory interface {
 	SendCommand(c Command)
-	Profile() *ProfilingDTO
+	Profile() map[string]interface{}
 
-	start(resp chan Ping)
-	options(dto OptionDTO)
+	run()
+	options(execs int)
 
 	runController()
-	createWrks(wrks int)
-	destroyWrks(wrks int)
-	setWrks(wrks int)
-	executeQuery()
+
+	setExecs(execs int)
+	createExecs(execs int)
+	destroyExecs(execs int)
+	activateExecs(execs int)
 }
 
 type History struct {
 	ctx context.Context
 
-	jobs chan *Job
-	free chan bool
-	stop chan bool
-	comm chan Command
+	jobs     chan *Job
+	execFree chan bool
+	execStop chan bool
+	comm     chan Command
 
-	wrks  int
+	execs int
 	queue *JobQueue
 
 	log     *slog.Logger
@@ -39,91 +40,91 @@ type History struct {
 	currentState IState
 }
 
-func (p *History) setState(s IState) {
-	p.currentState = s
-}
-
 func (p *History) SendCommand(c Command) {
 	p.comm <- c
 }
 
-func (p *History) Profile() *ProfilingDTO {
-	return &ProfilingDTO{
-		Workers:     p.wrks,
-		QueueLength: p.queue.Length(),
-		State:       p.currentState.getID(),
-		BlockFrom:   0,
-		BlockTo:     0,
-		BlockNext:   p.queue.ViewNext().blkNumber,
-	}
+func (p *History) setState(s IState) {
+	p.currentState = s
 }
 
-func (p *History) start(resp chan Ping) {
+func (p *History) Profile() map[string]interface{} {
+	return p.currentState.profile()
+}
 
-	p.currentState.start(resp)
+func (p *History) run() {
+
+	p.currentState.run()
 
 }
 
-func (p *History) options(dto OptionDTO) {
+func (p *History) options(execs int) {
 
-	p.currentState.options(dto)
+	p.currentState.options(execs)
 
 }
 
 func (p *History) runController() {
 	for {
 		select {
-		case <-p.free:
+		case <-p.execFree:
 			p.queue.SendJob()
 		case command := <-p.comm:
 			command.Execute()
 		}
 	}
-
-	close(p.jobs)
-	close(p.free)
-	close(p.stop)
-	close(p.comm)
 }
 
-func (p *History) createWrks(wrks int) {
-	for i := 0; i < wrks; i++ {
-		wrk := NewJobExecutor(
+func (p *History) createExecs(execs int) {
+	for i := 0; i < execs; i++ {
+		exec := NewJobExecutor(
 			p.jobs,
-			p.free,
-			p.stop,
+			p.execFree,
+			p.execStop,
 			p.log,
 			p.ctx,
 			p.gateway,
 		)
 
-		go wrk.Run()
+		go exec.Run()
 
-		p.wrks++
+		p.execs++
 	}
 }
 
-func (p *History) destroyWrks(wrks int) {
-	for i := 0; i < wrks; i++ {
-		if p.wrks == 0 {
+func (p *History) destroyExecs(execs int) {
+	for i := 0; i < execs; i++ {
+		if p.execs == 0 {
 			break
 		}
 
-		p.jobs <- nil
+		p.execStop <- true
 
-		p.wrks--
+		p.execs--
 	}
 }
 
-func (p *History) setWrks(wrks int) {
+func (p *History) setExecs(execs int) {
 
-	p.destroyWrks(p.wrks)
-	p.createWrks(wrks)
+	p.destroyExecs(p.execs)
+	p.createExecs(execs)
 
 }
 
-func (p *History) executeQuery() {
-	for i := 0; i < p.wrks; i++ {
+func (p *History) activateExecs(execs int) {
+	for i := 0; i < execs; i++ {
 		p.queue.SendJob()
 	}
+}
+
+func (p *History) handleQueryCompletion() {
+	for i := 0; i < p.execs; i++ {
+		<-p.queue.complete
+	}
+
+	p.log.Info("Parsing Completed.")
+
+	p.setState(
+		p.readyState,
+	)
 }
