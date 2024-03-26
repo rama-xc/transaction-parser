@@ -6,7 +6,6 @@ import (
 	"github.com/kataras/iris/v12"
 	interceptor "github.com/kataras/iris/v12/middleware/logger"
 	"log/slog"
-	corecontroller "transaction-parser/internal/adapters/controllers/core"
 	prscontroller "transaction-parser/internal/adapters/controllers/parsers"
 	"transaction-parser/internal/app/common/config"
 	"transaction-parser/internal/app/common/logger"
@@ -46,7 +45,7 @@ func (a *App) MustRun() {
 	// Загрузка Роутера
 	core := app.Party("/")
 	{
-		core.Get("/", corecontroller.Ping)
+		core.Get("/", func(ctx iris.Context) { _ = ctx.JSON(map[string]string{"ping": "pong"}) })
 		v1 := core.Party("/v1")
 		{
 			prs := v1.Party("/prs")

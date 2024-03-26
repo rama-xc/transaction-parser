@@ -1,11 +1,11 @@
 env = "local"
 
 [http-server]
-port = 8008
+port = 8013
 
 [[parsers-factories]]
 id = "ETH:mainnet"
 provider_url = "https://eth-mainnet.g.alchemy.com/v2/9Iwzq4BnnPoiF8i0X_QHKtczKVCy2bkS"
 blockchain = "ethereum"
 ["parsers-factories".parsers]
-history = { workers = 4, blockFrom = 0, blockTo = 1000 }
+history = { workers = 4, blockFrom = 0, blockTo = 616 }

@@ -57,8 +57,6 @@ func (s *ReadyState) run() {
 	s.prsr.setState(
 		s.prsr.runningState,
 	)
-
-	go s.prsr.handleQueryCompletion()
 }
 
 func (s *ReadyState) options(execs int) {

@@ -27,16 +27,12 @@ func (e *Ethereum) GetHistoryParser(
 		queue = append(queue, job)
 	}
 
-	jq := NewJobQueue(
-		queue, jobs,
-	)
-
 	h := &History{
 		comm:     comm,
 		jobs:     jobs,
+		queue:    NewJobQueue(queue),
 		execFree: free,
 		execStop: stop,
-		queue:    jq,
 		gateway:  e.gateway,
 		log:      log,
 		ctx:      context.Background(),
