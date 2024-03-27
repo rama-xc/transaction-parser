@@ -9,6 +9,7 @@ import (
 	prscontroller "transaction-parser/internal/adapters/controllers/parsers"
 	"transaction-parser/internal/app/common/config"
 	"transaction-parser/internal/app/common/logger"
+	"transaction-parser/internal/app/drivers/redis"
 	"transaction-parser/internal/usecases/parser"
 )
 
@@ -21,7 +22,8 @@ type App struct {
 func MustLoad(cfgPath string) *App {
 	cfg := config.MustLoad(cfgPath)
 	log := logger.MustLoad(cfg.Env)
-	prs := parser.MustLoad(cfg.ParsersFactories, log)
+	rds := redis.MustLoad()
+	prs := parser.MustLoad(cfg.ParsersFactories, log, rds)
 
 	app := &App{
 		port:  cfg.HTTP.Port,

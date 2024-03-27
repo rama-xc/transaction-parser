@@ -1,7 +1,10 @@
 package parser
 
+import "sync"
+
 type JobQueue struct {
 	queue []*Job
+	mx    sync.Mutex
 }
 
 func NewJobQueue(queue []*Job) *JobQueue {
@@ -28,9 +31,16 @@ func (q *JobQueue) Length() int {
 }
 
 func (q *JobQueue) GetJob() *Job {
+	q.mx.Lock()
+	defer q.mx.Unlock()
+
 	return q.shift()
 }
 
 func (q *JobQueue) AddJob(job *Job) {
+	q.mx.Lock()
+
 	q.push(job)
+
+	q.mx.Unlock()
 }

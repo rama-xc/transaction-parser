@@ -46,41 +46,45 @@ func (c *Controller) Run(ctx iris.Context) {
 }
 
 func (c *Controller) Option(ctx iris.Context) {
-	var dto OptionsBody
+	panic("Implement me!")
 
-	if err := ctx.ReadParams(&dto); err != nil {
-		ctx.StopWithError(http.StatusBadRequest, ValidationErr)
-		return
-	}
-
-	prsr, ok := c.prsrs[dto.ID]
-	if ok != true {
-		ctx.StopWithError(http.StatusNotFound, ParserNotFoundErr)
-		return
-	}
-
-	prsr.SendCommand(
-		parser.NewOptionsCommand(prsr, dto.Wrks),
-	)
-
-	_ = ctx.JSON(map[string]string{"message": "command send"})
+	//var dto OptionsBody
+	//
+	//if err := ctx.ReadParams(&dto); err != nil {
+	//	ctx.StopWithError(http.StatusBadRequest, ValidationErr)
+	//	return
+	//}
+	//
+	//prsr, ok := c.prsrs[dto.ID]
+	//if ok != true {
+	//	ctx.StopWithError(http.StatusNotFound, ParserNotFoundErr)
+	//	return
+	//}
+	//
+	//prsr.SendCommand(
+	//	parser.NewOptionsCommand(prsr, dto.Wrks),
+	//)
+	//
+	//_ = ctx.JSON(map[string]string{"message": "command send"})
 }
 
 func (c *Controller) Profiling(ctx iris.Context) {
-	var dto ProfilingParams
+	panic("Implement me!")
 
-	if err := ctx.ReadParams(&dto); err != nil {
-		ctx.StopWithError(http.StatusBadRequest, ValidationErr)
-		return
-	}
-
-	prsr, ok := c.prsrs[dto.ID]
-	if ok != true {
-		ctx.StopWithError(http.StatusNotFound, ParserNotFoundErr)
-		return
-	}
-
-	_ = ctx.JSON(
-		prsr.Profile(),
-	)
+	//var dto ProfilingParams
+	//
+	//if err := ctx.ReadParams(&dto); err != nil {
+	//	ctx.StopWithError(http.StatusBadRequest, ValidationErr)
+	//	return
+	//}
+	//
+	//prsr, ok := c.prsrs[dto.ID]
+	//if ok != true {
+	//	ctx.StopWithError(http.StatusNotFound, ParserNotFoundErr)
+	//	return
+	//}
+	//
+	//_ = ctx.JSON(
+	//	prsr.Profile(),
+	//)
 }

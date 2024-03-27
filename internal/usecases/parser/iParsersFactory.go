@@ -3,6 +3,7 @@ package parser
 import (
 	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"log/slog"
 	ethgateway "transaction-parser/internal/adapters/gateways/eth"
 	"transaction-parser/internal/app/common/config"
@@ -16,7 +17,7 @@ type BlockProvider interface {
 }
 
 type IParsersFactory interface {
-	GetHistoryParser(fromBlk, toBlk int64, execs int, log *slog.Logger) IHistory
+	GetHistoryParser(fromBlk, toBlk int64, execs int, log *slog.Logger, redis *redis.Client) IHistory
 }
 
 func GetParsersFactory(
@@ -42,7 +43,7 @@ type IParserBase interface {
 	Listen()
 }
 
-func MustLoad(cfg []config.ParsersFactoriesConfig, log *slog.Logger) map[string]IHistory {
+func MustLoad(cfg []config.ParsersFactoriesConfig, log *slog.Logger, redis *redis.Client) map[string]IHistory {
 	prs := map[string]IHistory{}
 
 	for _, factoryCfg := range cfg {
@@ -54,7 +55,7 @@ func MustLoad(cfg []config.ParsersFactoriesConfig, log *slog.Logger) map[string]
 		hCfg := factoryCfg.Parsers.History
 
 		prs[fmt.Sprintf("%s:history", factoryCfg.ID)] =
-			factory.GetHistoryParser(hCfg.BlockFrom, hCfg.BlockTo, hCfg.Workers, log)
+			factory.GetHistoryParser(hCfg.BlockFrom, hCfg.BlockTo, hCfg.Workers, log, redis)
 	}
 
 	return prs

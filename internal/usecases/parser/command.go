@@ -16,18 +16,18 @@ func (c *RunCommand) Execute() {
 	c.prsr.run()
 }
 
-type OptionsCommand struct {
-	prsr IHistory
-
-	wrks int
-}
-
-func NewOptionsCommand(prsr IHistory, wrks int) *OptionsCommand {
-	return &OptionsCommand{prsr: prsr, wrks: wrks}
-}
-
-func (c *OptionsCommand) Execute() {
-	c.prsr.options(
-		c.wrks,
-	)
-}
+//type OptionsCommand struct {
+//	prsr IHistory
+//
+//	wrks int
+//}
+//
+//func NewOptionsCommand(prsr IHistory, wrks int) *OptionsCommand {
+//	return &OptionsCommand{prsr: prsr, wrks: wrks}
+//}
+//
+//func (c *OptionsCommand) Execute() {
+//	c.prsr.options(
+//		c.wrks,
+//	)
+//}

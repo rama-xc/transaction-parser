@@ -3,6 +3,7 @@ package parser
 import (
 	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"log/slog"
 )
 
@@ -13,20 +14,34 @@ type JobHandler interface {
 
 type JobExecutor struct {
 	mediator Mediator
-	jobs     chan *Job
-	free     bool
-	alive    bool
-	log      *slog.Logger
-	ctx      context.Context
-	gateway  BlockProvider
+
+	free    bool
+	alive   bool
+	stopped bool
+
+	log *slog.Logger
+	ctx context.Context
+
+	gateway BlockProvider
+	redis   *redis.Client
 }
 
-func NewJobExecutor() *JobExecutor {
+func NewJobExecutor(
+	mediator Mediator,
+	log *slog.Logger,
+	ctx context.Context,
+	gateway BlockProvider,
+	redis *redis.Client,
+) *JobExecutor {
 	exec := &JobExecutor{
-		mediator: nil,
-		jobs:     nil,
+		mediator: mediator,
 		free:     true,
 		alive:    true,
+		stopped:  true,
+		log:      log,
+		ctx:      ctx,
+		gateway:  gateway,
+		redis:    redis,
 	}
 
 	go exec.run()
@@ -35,70 +50,49 @@ func NewJobExecutor() *JobExecutor {
 }
 
 func (e *JobExecutor) run() {
-LifecycleLoop:
-	for {
 
-		select {
+	for e.alive {
 
-		case job := <-e.jobs:
+		for !e.stopped {
+
+			job := e.mediator.getJob()
+
 			if job == nil {
+				e.stop()
+				e.mediator.tryHandleQueueCompletion()
+
 				continue
 			}
+
 			e.free = false
 
+			cache := NewCacheBlock(e.log, e.ctx, e.redis)
+
 			parse := NewParseBlock(e.log, e.ctx, e.gateway)
+			parse.setNext(cache)
+
 			parse.execute(job)
 
 			e.free = true
-		default:
-			if e.alive == false {
-				break LifecycleLoop
-			}
 
 		}
 
 	}
+
 }
 
 func (e *JobExecutor) kill() {
 	e.alive = false
 }
 
-//	type JobExecutor struct {
-//		jobs     chan *Job
-//		execFree chan bool
-//		execStop chan bool
-//
-//		log *slog.Logger
-//		ctx context.Context
-//
-//		gateway BlockProvider
-//	}
-//
-//	func NewJobExecutor(jobs chan *Job, execFree, execStop chan bool, log *slog.Logger, ctx context.Context, gateway BlockProvider) *JobExecutor {
-//		return &JobExecutor{jobs: jobs, execFree: execFree, execStop: execStop, log: log, ctx: ctx, gateway: gateway}
-//	}
-//
-// func (e *JobExecutor) Run() {
-// RunningLoop:
-//
-//		for {
-//			select {
-//			case job := <-e.jobs:
-//				if job == nil {
-//					e.log.Warn("Get Empty Job!")
-//					continue
-//				}
-//
-//				parse := NewParseBlock(e.log, e.ctx, e.gateway)
-//				parse.execute(job)
-//
-//				e.execFree <- true
-//			case <-e.execStop:
-//				break RunningLoop
-//			}
-//		}
-//	}
+func (e *JobExecutor) stop() {
+	e.stopped = true
+}
+
+func (e *JobExecutor) proceed() {
+	e.stopped = false
+}
+
 type ParseBlock struct {
 	log *slog.Logger
 	ctx context.Context
@@ -113,18 +107,60 @@ func NewParseBlock(log *slog.Logger, ctx context.Context, gateway BlockProvider)
 }
 
 func (p *ParseBlock) execute(job *Job) {
+	op := "ParseBlock.execute"
+
 	blk, err := p.gateway.Block(p.ctx, job.blkNumber)
 	if err != nil {
-		p.log.Error(fmt.Sprintf("%s: %s", job.id, err.Error()))
+		p.log.Error(fmt.Sprintf("%s-%s: %s", op, job.id, err.Error()))
 		return
 	}
 
 	job.block = blk
 
-	p.log.Info(fmt.Sprintf("%s: block parsed", job.id))
+	//p.log.Info(fmt.Sprintf("%s: block parsed", job.id))
+
+	p.next.execute(job)
 }
 
 func (p *ParseBlock) setNext(handler JobHandler) {
-	//TODO implement me
-	panic("implement me")
+	p.next = handler
+}
+
+type CacheBlock struct {
+	log *slog.Logger
+	ctx context.Context
+
+	redis *redis.Client
+
+	next JobHandler
+}
+
+func (c *CacheBlock) execute(job *Job) {
+	op := "CacheBlock.execute"
+
+	mappedJob, err := job.toMap()
+	if err != nil {
+		c.log.Error(fmt.Sprintf("%s-%s: %s", op, job.id, err.Error()))
+		return
+	}
+
+	for k, v := range mappedJob {
+		err := c.redis.HSet(c.ctx, job.id, k, v).Err()
+		if err != nil {
+			c.log.Error(fmt.Sprintf("%s-%s: %s", op, job.id, err.Error()))
+			return
+		}
+	}
+
+	c.log.Info(fmt.Sprintf("%s: block cached", job.id))
+
+}
+
+func (c *CacheBlock) setNext(handler JobHandler) {
+	c.next = handler
+
+}
+
+func NewCacheBlock(log *slog.Logger, ctx context.Context, redis *redis.Client) *CacheBlock {
+	return &CacheBlock{log: log, ctx: ctx, redis: redis}
 }
