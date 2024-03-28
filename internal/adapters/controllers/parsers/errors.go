@@ -3,6 +3,6 @@ package prscontroller
 import "errors"
 
 var (
-	ParserNotFoundErr = errors.New("parser not found")
+	ParserNotFoundErr = errors.New("block not found")
 	ValidationErr     = errors.New("validation error")
 )

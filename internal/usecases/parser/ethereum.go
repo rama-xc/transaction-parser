@@ -2,19 +2,18 @@ package parser
 
 import (
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"log/slog"
 )
 
 type Ethereum struct {
-	gateway BlockProvider
+	blkProvider BlockProvider
+	blkCaching  BlockCaching
 }
 
 func (e *Ethereum) GetHistoryParser(
 	fromBlk, toBlk int64,
 	execsAmount int,
 	log *slog.Logger,
-	redis *redis.Client,
 ) IHistory {
 	comm := make(chan Command)
 
@@ -28,7 +27,7 @@ func (e *Ethereum) GetHistoryParser(
 	h := &History{
 		comm:        comm,
 		log:         log,
-		execManager: NewExecutorManager(queue, execsAmount, log, e.gateway, redis),
+		execManager: NewExecutorManager(queue, execsAmount, log, e.blkProvider, e.blkCaching),
 	}
 
 	go h.runController()

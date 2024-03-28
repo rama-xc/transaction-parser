@@ -1,6 +1,8 @@
 package parser
 
-import "sync"
+import (
+	"sync"
+)
 
 type JobQueue struct {
 	queue []*Job

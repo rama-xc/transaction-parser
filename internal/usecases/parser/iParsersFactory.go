@@ -1,39 +1,35 @@
 package parser
 
 import (
-	"context"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"log/slog"
-	ethgateway "transaction-parser/internal/adapters/gateways/eth"
+	ethgateway "transaction-parser/internal/adapters/gateways/block"
+	blkrepo "transaction-parser/internal/adapters/repositories/block"
 	"transaction-parser/internal/app/common/config"
 	ethdriver "transaction-parser/internal/app/drivers/eth"
-	"transaction-parser/internal/entity"
 )
 
-type BlockProvider interface {
-	Block(ctx context.Context, number int64) (*entity.Block, error)
-	LastBlockNum(ctx context.Context) (int64, error)
-}
-
 type IParsersFactory interface {
-	GetHistoryParser(fromBlk, toBlk int64, execs int, log *slog.Logger, redis *redis.Client) IHistory
+	GetHistoryParser(fromBlk, toBlk int64, execs int, log *slog.Logger) IHistory
 }
 
 func GetParsersFactory(
 	blockchain config.BlockchainName,
 	providerUrl string,
+	redisDrv *redis.Client,
 ) (IParsersFactory, error) {
 	switch blockchain {
 	case config.Ethereum:
-		drv, err := ethdriver.New(providerUrl)
+		ethDrv, err := ethdriver.New(providerUrl)
 		if err != nil {
 			return nil, DriverConnectionError
 		}
 
-		gtw := ethgateway.New(drv)
+		blkprovider := ethgateway.New(ethDrv)
+		blkcaching := blkrepo.NewRedisRepo(redisDrv)
 
-		return &Ethereum{gateway: gtw}, nil
+		return &Ethereum{blkProvider: blkprovider, blkCaching: blkcaching}, nil
 	default:
 		return nil, BlockchainNameError
 	}
@@ -43,11 +39,11 @@ type IParserBase interface {
 	Listen()
 }
 
-func MustLoad(cfg []config.ParsersFactoriesConfig, log *slog.Logger, redis *redis.Client) map[string]IHistory {
+func MustLoad(cfg []config.ParsersFactoriesConfig, log *slog.Logger, redisDrv *redis.Client) map[string]IHistory {
 	prs := map[string]IHistory{}
 
 	for _, factoryCfg := range cfg {
-		factory, err := GetParsersFactory(factoryCfg.Blockchain, factoryCfg.ProviderUrl)
+		factory, err := GetParsersFactory(factoryCfg.Blockchain, factoryCfg.ProviderUrl, redisDrv)
 		if err != nil {
 			panic(err)
 		}
@@ -55,7 +51,7 @@ func MustLoad(cfg []config.ParsersFactoriesConfig, log *slog.Logger, redis *redi
 		hCfg := factoryCfg.Parsers.History
 
 		prs[fmt.Sprintf("%s:history", factoryCfg.ID)] =
-			factory.GetHistoryParser(hCfg.BlockFrom, hCfg.BlockTo, hCfg.Workers, log, redis)
+			factory.GetHistoryParser(hCfg.BlockFrom, hCfg.BlockTo, hCfg.Workers, log)
 	}
 
 	return prs

@@ -1,4 +1,4 @@
-package ethgateway
+package blkgtw
 
 import (
 	"context"

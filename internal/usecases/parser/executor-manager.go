@@ -2,8 +2,8 @@ package parser
 
 import (
 	"context"
-	"github.com/redis/go-redis/v9"
 	"log/slog"
+	"transaction-parser/internal/entity"
 )
 
 type Mediator interface {
@@ -19,18 +19,27 @@ type ExecutorManager struct {
 	readyState   State
 	runningState State
 
-	log     *slog.Logger
-	gateway BlockProvider
-	redis   *redis.Client
+	log         *slog.Logger
+	blkProvider BlockProvider
+	blkCaching  BlockCaching
 }
 
-func NewExecutorManager(queue []*Job, execsAmount int, log *slog.Logger, gateway BlockProvider, redis *redis.Client) *ExecutorManager {
+type BlockProvider interface {
+	Block(ctx context.Context, number int64) (*entity.Block, error)
+	LastBlockNum(ctx context.Context) (int64, error)
+}
+
+type BlockCaching interface {
+	Cache(ctx context.Context, key string, b *entity.Block) error
+}
+
+func NewExecutorManager(queue []*Job, execsAmount int, log *slog.Logger, blkProvider BlockProvider, blkCaching BlockCaching) *ExecutorManager {
 	e := &ExecutorManager{
-		jobQueue: NewJobQueue(queue),
-		execs:    []*JobExecutor{},
-		log:      log,
-		gateway:  gateway,
-		redis:    redis,
+		jobQueue:    NewJobQueue(queue),
+		execs:       []*JobExecutor{},
+		log:         log,
+		blkProvider: blkProvider,
+		blkCaching:  blkCaching,
 	}
 
 	readyState := &ReadyState{mgr: e}
@@ -72,8 +81,8 @@ func (m *ExecutorManager) createExec() {
 		m,
 		m.log,
 		context.TODO(),
-		m.gateway,
-		m.redis,
+		m.blkProvider,
+		m.blkCaching,
 	)
 
 	m.execs = append(m.execs, exec)

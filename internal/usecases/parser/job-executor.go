@@ -3,7 +3,6 @@ package parser
 import (
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"log/slog"
 )
 
@@ -22,26 +21,26 @@ type JobExecutor struct {
 	log *slog.Logger
 	ctx context.Context
 
-	gateway BlockProvider
-	redis   *redis.Client
+	blkProvider BlockProvider
+	blkCaching  BlockCaching
 }
 
 func NewJobExecutor(
 	mediator Mediator,
 	log *slog.Logger,
 	ctx context.Context,
-	gateway BlockProvider,
-	redis *redis.Client,
+	blkProvider BlockProvider,
+	blkCaching BlockCaching,
 ) *JobExecutor {
 	exec := &JobExecutor{
-		mediator: mediator,
-		free:     true,
-		alive:    true,
-		stopped:  true,
-		log:      log,
-		ctx:      ctx,
-		gateway:  gateway,
-		redis:    redis,
+		mediator:    mediator,
+		free:        true,
+		alive:       true,
+		stopped:     true,
+		log:         log,
+		ctx:         ctx,
+		blkProvider: blkProvider,
+		blkCaching:  blkCaching,
 	}
 
 	go exec.run()
@@ -66,9 +65,9 @@ func (e *JobExecutor) run() {
 
 			e.free = false
 
-			cache := NewCacheBlock(e.log, e.ctx, e.redis)
+			cache := NewCacheBlock(e.log, e.ctx, e.blkCaching)
 
-			parse := NewParseBlock(e.log, e.ctx, e.gateway)
+			parse := NewParseBlock(e.log, e.ctx, e.blkProvider)
 			parse.setNext(cache)
 
 			parse.execute(job)
@@ -97,19 +96,19 @@ type ParseBlock struct {
 	log *slog.Logger
 	ctx context.Context
 
-	gateway BlockProvider
+	blkProvider BlockProvider
 
 	next JobHandler
 }
 
-func NewParseBlock(log *slog.Logger, ctx context.Context, gateway BlockProvider) *ParseBlock {
-	return &ParseBlock{log: log, ctx: ctx, gateway: gateway}
+func NewParseBlock(log *slog.Logger, ctx context.Context, blkProvider BlockProvider) *ParseBlock {
+	return &ParseBlock{log: log, ctx: ctx, blkProvider: blkProvider}
 }
 
 func (p *ParseBlock) execute(job *Job) {
 	op := "ParseBlock.execute"
 
-	blk, err := p.gateway.Block(p.ctx, job.blkNumber)
+	blk, err := p.blkProvider.Block(p.ctx, job.blkNumber)
 	if err != nil {
 		p.log.Error(fmt.Sprintf("%s-%s: %s", op, job.id, err.Error()))
 		return
@@ -117,7 +116,7 @@ func (p *ParseBlock) execute(job *Job) {
 
 	job.block = blk
 
-	//p.log.Info(fmt.Sprintf("%s: block parsed", job.id))
+	//p.log.Info(fmt.Sprintf("%s: block parsed", block.id))
 
 	p.next.execute(job)
 }
@@ -130,7 +129,7 @@ type CacheBlock struct {
 	log *slog.Logger
 	ctx context.Context
 
-	redis *redis.Client
+	blkCaching BlockCaching
 
 	next JobHandler
 }
@@ -138,18 +137,10 @@ type CacheBlock struct {
 func (c *CacheBlock) execute(job *Job) {
 	op := "CacheBlock.execute"
 
-	mappedJob, err := job.toMap()
+	err := c.blkCaching.Cache(c.ctx, job.id, job.block)
 	if err != nil {
 		c.log.Error(fmt.Sprintf("%s-%s: %s", op, job.id, err.Error()))
 		return
-	}
-
-	for k, v := range mappedJob {
-		err := c.redis.HSet(c.ctx, job.id, k, v).Err()
-		if err != nil {
-			c.log.Error(fmt.Sprintf("%s-%s: %s", op, job.id, err.Error()))
-			return
-		}
 	}
 
 	c.log.Info(fmt.Sprintf("%s: block cached", job.id))
@@ -161,6 +152,6 @@ func (c *CacheBlock) setNext(handler JobHandler) {
 
 }
 
-func NewCacheBlock(log *slog.Logger, ctx context.Context, redis *redis.Client) *CacheBlock {
-	return &CacheBlock{log: log, ctx: ctx, redis: redis}
+func NewCacheBlock(log *slog.Logger, ctx context.Context, blkCaching BlockCaching) *CacheBlock {
+	return &CacheBlock{log: log, ctx: ctx, blkCaching: blkCaching}
 }

@@ -62,7 +62,7 @@ func (c *Controller) Option(ctx iris.Context) {
 	//}
 	//
 	//prsr.SendCommand(
-	//	parser.NewOptionsCommand(prsr, dto.Wrks),
+	//	block.NewOptionsCommand(prsr, dto.Wrks),
 	//)
 	//
 	//_ = ctx.JSON(map[string]string{"message": "command send"})
