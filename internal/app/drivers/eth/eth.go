@@ -1,4 +1,4 @@
-package ethdriver
+package ethdrv
 
 import (
 	"errors"

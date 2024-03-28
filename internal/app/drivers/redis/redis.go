@@ -1,4 +1,4 @@
-package redis
+package rdsdrv
 
 import "github.com/redis/go-redis/v9"
 

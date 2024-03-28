@@ -22,7 +22,7 @@ type App struct {
 func MustLoad(cfgPath string) *App {
 	cfg := config.MustLoad(cfgPath)
 	log := logger.MustLoad(cfg.Env)
-	rds := redis.MustLoad()
+	rds := rdsdrv.MustLoad()
 	prs := parser.MustLoad(cfg.ParsersFactories, log, rds)
 
 	app := &App{
